@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Shaowei's diffusion Simulation</title>
+
+        <!-- External javascript files -->
+        <script src="http://www.babylonjs.com/hand.minified-1.2.js"></script>
+        <!-- <script src="http://www.babylonjs.com/cannon.js"></script>
+        <script src="http://www.babylonjs.com/oimo.js"></script> -->
+        <script src="http://www.babylonjs.com/babylon.js"></script>
+        <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+        <!--<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>-->
+
+        <!-- External css files -->
+        <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+
+        <!-- Style -->
+        <style type = "text/css">
+
+            body {
+                overflow: scroll;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                background-color:white;
+                color: black
+            }
+            #canvas1 {
+                position:absolute;
+                left: 35px;
+                top: 140px;
+                width: 600px;
+                height: 600px;
+                border: 1px solid teal;
+                touch-action: auto;
+            }
+            #Header {
+                position: absolute;
+                left: 20px;
+                top: 20px;
+                opacity: 0.9;
+                touch-action: none;
+            }
+            #userInterface {
+                position: absolute;
+                left: 20px;
+                top: 60px;
+                opacity: 0.9;
+                touch-action: none;
+            }
+        </style>
+    </head>
+
+    <!-- Body starts -->
+    <body>
+        <!-- Header -->
+        <div id = "Header" class="container">
+            <h4>Shaowei's diffusion Simulation <font color="#a9a9a9">| UCONN </font> <a href="http://csml.uconn.edu"><i class="w3-medium glyphicon glyphicon-home"></i></a></h4>
+        </div>
+
+        <!-- User Interface -->
+        <div id = "userInterface" class="container">
+            <div id = "controlPanel">
+                <button id = "run" onclick="run()" class="w3-btn w3-white w3-border w3-ripple glyphicon glyphicon-play" ></button>
+                <button id = "pause" onclick="pause()" class="w3-btn w3-white w3-border w3-ripple glyphicon glyphicon-pause" ></button>
+                <button id = "stop" onclick="stop()" class="w3-btn w3-white w3-border w3-ripple glyphicon glyphicon-stop" ></button>
+                <p><div id="iteration" class = "w3-tag w3-teal"></div></p>
+            </div>
+            <div id = "inputPanel">
+                                     
+                <label for="diffusion">Diffusion coefficeint: </label>
+                <input type="number" id="diffusion" value="0.1"><br>
+                <input type="checkbox" id = "o2" checked> Show extracellular IL-2 (green)<br>
+                <input type="checkbox" id = "i2"> Show intracellular IL-2 (red)<br>
+                <input type="checkbox" id = "rotateCamera"> Auto camera rotation
+            </div>
+        </div>
+
+        <!-- Simulation canvas -->
+        <canvas id="canvas1" ></canvas>
+
+        <!-- Javascript -->
+        <script type = "text/javascript">
+
+            var canvas = document.getElementById("canvas1");
+            var engine = new BABYLON.Engine(canvas, true);
+
+            // Create simulation scene using Babylon.js
+            createScene = function () {
+                // This creates a basic Babylon Scene object (non-mesh)
+                var scene = new BABYLON.Scene(engine);
+
+                // Unit (environment & cell) size
+                var size = 1;
+
+                // User input values
+                var numX = 100;
+                var numY = 100;
+                var minX = 40;
+                var maxX = 60;
+                var minY = 40;
+                var maxY = 60;
+                var agLevel = 50;
+                var probAgStim = 0.3;
+                var diffusion = document.getElementById("diffusion").value;
+
+                // ArcRotateCamera >> Camera turning around a 3D point (here Vector zero) with mouse and cursor keys
+                // Parameters : name, alpha, beta, radius, target, scene
+                var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera",0,0,0, new BABYLON.Vector3(numX*size/2,numY*size/2,0), scene);
+                camera.setPosition(new BABYLON.Vector3(numX*size/2,numY*size/2,-1.5*numX*size));
+                scene.activeCamera.attachControl(canvas);
+
+                // Create light
+                var light = new BABYLON.PointLight("Light", new BABYLON.Vector3(0, 0, 20), scene);
+                light.diffuse = new BABYLON.Color3(1, 1, 1);
+                light.specular = new BABYLON.Color3(1, 1, 1);
+                light.intensity = 1;
+
+                // Create 2D array of environment units
+                var env = new Array(numX);
+                for (var x = 0; x < numX; x++) {
+                    env[x] = new Array(numY);
+                }
+
+                // Create 2D array of environment unit materials
+                var materialEnv = new Array(numX);
+                for (var x = 0; x < numX; x++) {
+                    materialEnv[x] = new Array(numY);
+                }
+
+                // Create 2D array of cells
+                var cell = new Array(numX);
+                for (var x = 0; x < numX; x++) {
+                    cell[x] = new Array(numY);
+                }
+
+                // Create 2D array of cell unit materials
+                var materialCell = new Array(numX);
+                for (var x = 0; x < numX; x++) {
+                    materialCell[x] = new Array(numY);
+                }
+
+                //Creation of environment units (boxes) and cells (spheres)
+                var envs = [];
+                var cells = [];
+                for (var x = 0; x < numX; x++) {
+                    for (var y = 0; y < numY; y++) {
+
+                        //Creation of a box (name of the box, size, scene)
+                        env[x][y] = new BABYLON.Mesh.CreateBox("Environment", size, scene);
+                        if (document.getElementById("o2").checked) {
+                            env[x][y].visibility = 1;
+                        } else {
+                            env[x][y].visibility = 0;
+                        }
+                        materialEnv[x][y] = new BABYLON.StandardMaterial("Environment material", scene);
+                        env[x][y].material = materialEnv[x][y];
+                        env[x][y].material.alpha = 0; // initial extracellular IL-2 concentration set to zero
+						
+                        env[x][y].material.emissiveColor = new BABYLON.Color3(0.2, 0.5, 0.2);
+                        env[x][y].material.diffuseColor = new BABYLON.Color3(0.2, 0.5, 0.2);
+                        env[x][y].material.ambientColor = new BABYLON.Color3(0.2, 0.5, 0.2);
+                        env[x][y].position.x = x * size;
+                        env[x][y].position.y = y * size;
+                        envs.push(env[x][y]);
+
+                        //Creation of a sphere
+                        //(name of the sphere, segments, diameter, scene)
+                        cell[x][y] = new BABYLON.Mesh.CreateSphere("Cell", 10.0, 1, scene);
+                        if (document.getElementById("i2").checked) {
+                            cell[x][y].visibility = 1;
+                        } else {
+                            cell[x][y].visibility = 0;
+                        }
+                        materialCell[x][y] = new BABYLON.StandardMaterial("Cell material", scene);
+                        cell[x][y].material = materialCell[x][y];
+                        cell[x][y].material.alpha = 0; // initial intracellular IL-2 concentration set to yero
+                        cell[x][y].material.emissiveColor = new BABYLON.Color3(0.8, 0.2, 0.2);
+                        cell[x][y].material.diffuseColor = new BABYLON.Color3(0.8, 0.2, 0.2);
+                        cell[x][y].material.ambientColor = new BABYLON.Color3(0.8, 0.2, 0.2);
+                        cell[x][y].position.x = x * size;
+                        cell[x][y].position.y = y * size;
+                            cells.push(env[x][y]);
+                    }
+                }
+				env[50][50].material.alpha = 1;
+
+                // Create 2D array of antigen levels for cells
+                var antigen = new Array(numX);
+                for (var x = 0; x < numX; x++) {
+                    antigen[x] = new Array(numY);
+                }
+
+                //Randomly select cells for antigen activation
+                for (var x = 0; x < numX; x++) {
+                    for (var y = 0; y < numY; y++) {
+
+                        if (Math.random () < probAgStim && x > minX && x < maxX && y > minY && y < maxY) {
+                            antigen[x][y] = agLevel;
+                        }
+                        else  antigen[x][y] = 0;
+                    }
+                }
+
+                //Canvas background color
+                scene.clearColor = new BABYLON.Color3(1, 1, 1);
+
+                //Setting initial values for adaptation
+                var mu0 = 0.1;
+                var epsilon = 0.000001;
+                var w1 = 0.1;
+                var w2 = 0.1;
+                var iteration = 0;
+
+
+                scene.registerBeforeRender(function () {
+
+                    if (document.getElementById("rotateCamera").checked) {
+                        camera.alpha += 0.01 ;
+                        camera.beta += 0;
+                        camera.radius -= 0.001*numX ;
+                    }
+
+                    document.getElementById("iteration").innerText = "Iteration: " + iteration;
+
+                    // diffusion
+                    for (var x = 1; x < numX - 1; x++) {
+                        for (var y = 1; y < numY - 1; y++) {
+                            env[x][y].material.alpha += diffusion * (env[x + 1][y].material.alpha - 2 * env[x][y].material.alpha + env[x - 1][y].material.alpha
+                                    + env[x][y + 1].material.alpha - 2 * env[x][y].material.alpha + env[x][y - 1].material.alpha);
+                        }
+                    }
+                    iteration++;
+                });
+                return scene;
+            };
+
+            canvas.style.display = "none";
+            document.getElementById("pause").disabled =true;
+            document.getElementById("stop").disabled =true;
+            function run() {
+                if (document.getElementById("stop").disabled === true)
+                {
+                    canvas.style.display = "block";
+                    document.getElementById("inputPanel").style.display = "none";
+                    scene = createScene();
+                }
+                document.getElementById("run").disabled = true;
+                document.getElementById("pause").disabled = false;
+                document.getElementById("stop").disabled = false;
+                engine.runRenderLoop(function () {
+                    scene.render();
+                });
+            }
+
+            function pause() {
+            document.getElementById("run").disabled = false;
+            document.getElementById("pause").disabled = true;
+            document.getElementById("stop").disabled = false;
+            engine.stopRenderLoop();
+            };
+
+            function stop() {
+            document.getElementById("run").disabled = false;
+            document.getElementById("pause").disabled = true;
+            document.getElementById("stop").disabled = true;
+            engine.stopRenderLoop();
+            document.getElementById("iteration").innerText = "";
+            canvas.style.display = "none";
+            document.getElementById("inputPanel").style.display = "block";
+            };
+
+            // Resize
+            window.addEventListener("resize", function () {
+                engine.resize();
+            });
+
+        </script>
+    </body>
+</html>

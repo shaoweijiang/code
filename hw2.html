@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<!-- Learn Systems Biology by Yong-Jun Shin (csml.uconn.edu), 2016
+     Module 9: Parameter Estimation using an Adaptive Filter -->
+
+    <head>
+        <meta name="description" content="Learn Systems Biology, Introduction to Systems Biology">
+        <meta name="author" content="Yong-Jun Shin (UCONN Computational and Systems Medicine Lab, 2016)">
+        <!-- Cascading Style Sheet (CSS) for the simulation layout-->
+        <link rel="stylesheet" href="css/sim.css">
+        <!-- Cascading Style Sheet (CSS) for the sidebar menu-->
+        <link rel="stylesheet" href="css/menu.css">
+        <!-- bootstrap.css http://getbootsrap.com -->
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+        <!-- w3.css http://www.w3schools.com/w3css/ -->
+        <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
+        <!-- jquery https://jquery.com -->
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <!-- bootstrap.js http://getbootsrap.com -->
+        <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+        <!-- ace.js: an embeddable code editor written in JavaScript https://ace.c9.io -->
+        <script src="http://rawgithub.com/ajaxorg/ace-builds/master/src-noconflict/ace.js"></script>
+        <!-- pltly.js: the open source JavaScript graphing library https://plot.ly/javascript -->
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <!-- http://www.filosophy.org/post/35/normaldistributed_random_values_in_javascript_using_the_ziggurat_algorithm/ -->
+        <script src="js/random.js"></script>
+    </head>
+
+    <body>
+        <!-- Sidebar Menu -->
+        <div id="wrapper">
+            <div id="sidebar-wrapper">
+                <ul class="sidebar-nav w3-large">
+                    <li class="sidebar-brand "></li>
+                    <li>
+                        <a href="index.html">Module 1</a>
+                    </li>
+                    <li>
+                        <a href="module2.html">Module 2</a>
+                    </li>
+                    <li>
+                        <a href="module3.html">Module 3</a>
+                    </li>
+                    <li>
+                        <a href="module4.html">Module 4</a>
+                    </li>
+                    <li>
+                        <a href="module5.html">Module 5</a>
+                    </li>
+                    <li>
+                        <a href="module6.html">Module 6</a>
+                    </li>
+                    <li>
+                        <a href="module7.html">Module 7</a>
+                    </li>
+                    <li>
+                        <a href="module8.html">Module 8</a>
+                    </li>
+                    <li>
+                        <a href="module9.html">Module 9</a>
+                    </li>
+                    <li>
+                        <a href="module10.html">Module 10</a>
+                    </li>
+                    <li>
+                        <a href="module11.html">Module 11</a>
+                    </li>
+                    <li>
+                        <a href="module12.html">Module 12</a>
+                    </li>
+                    <li>
+                        <a href="module13.html">Module 13</a>
+                    </li>
+                    <li>
+                        <a href="module14.html">Module 14</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div id = "header" class="container">
+            <h3><b> Module 9: Parameter Estimation using an Adaptive Filter</b></h3>
+            <h4>Learn Systems Biology <font color="#a9a9a9"> by UCONN CSMLab </font> <a href="http://csml.uconn.edu"><i class="glyphicon glyphicon-home w3-medium"></i></a></h4>
+        </div>
+
+        <!-- Navigation -->
+        <div id = "navigation" class="container">
+            <a href="module8.html"><i class="glyphicon glyphicon-chevron-left w3-xxlarge"></i></a>
+            <a href="module10.html"><i class="glyphicon glyphicon-chevron-right w3-xxlarge"></i></a>
+        </div>
+
+        <!-- User interface -->
+        <button id ="run" class="w3-btn w3-ripple w3-teal w3-large" onclick="run()">Run</button>
+        <button id ="reset" class="w3-btn w3-ripple w3-red w3-large" onclick="history.go(0)">Reset</button>
+        <div id = "checkbox">
+            <input id = "xProtein" class="w3-check" type="checkbox" >
+            <label class="w3-medium ">Show x protein</label> <br>
+            <input id = "yProtein" class="w3-check" type="checkbox" checked="checked">
+            <label class="w3-medium">Show y protein</label><br>
+            <input id = "hold" class="w3-check" type="checkbox">
+            <label class="w3-medium">Hold</label>
+        </div>
+        <ol id = "guide">
+            <li class = "w3-large" >Modify the JavaScript code below</li>
+            <li class = "w3-large" >Check/uncheck checkboxes</li>
+            <li class = "w3-large" >Press [Run]</li>
+        </ol>
+
+        <!-- Chart -->
+        <div id="chart"></div>
+
+        <!-- Code editor with default text -->
+        <div id="editor">
+    
+    N = 281;                  // total number of data points
+    x = new Array(N);         // x protein concentration (uM)
+    y = new Array(N);         // y protein concentration (uM)
+    X = 30;                   // constant x protein concentration
+    x[0] = X;                 // initial x protein concentration
+    y[0] = 0;                 // initial y protein concentration
+    pXY = 0.4;                // production parameter
+    pY = 0.8;                 // degradation/dilution parameter
+
+    // fake data generation
+
+        x = [7.08343,
+7.01743,
+7.08343,
+7.41772,
+7.41756,
+7.43376,
+14.5658,
+14.4693,
+14.5658,
+25.3260,
+25.3324,
+25.3177,
+32.5285,
+32.5197,
+32.5285,
+36.2207,
+36.2205,
+36.2208,
+33.8696,
+33.8287,
+33.8696,
+21.8272,
+21.8419,
+21.8475,
+10.7602,
+10.8055,
+10.7602,
+7.34086,
+7.34246,
+7.34038,
+7.91295,
+7.77936,
+7.91295,
+8.28294,
+8.28490,
+8.26176,
+7.70127,
+7.62207,
+7.70127,
+8.30148,
+8.32973,
+8.32937,
+9.32532,
+9.27954,
+9.32532,
+8.78829,
+8.78810,
+8.77038,
+12.8424,
+12.7298,
+12.8424,
+16.8922,
+16.8968,
+16.9036,
+18.6675,
+18.7068,
+18.6675,
+22.6271,
+22.6220,
+22.6219,
+24.2433,
+24.2080,
+24.2433,
+24.9758,
+24.9765,
+24.9650,
+20.8044,
+20.7733,
+20.8044,
+11.5495,
+11.6422,
+11.6288,
+8.98808,
+9.07269,
+8.98808,
+8.58476,
+8.58498,
+8.58350,
+8.20429,
+8.24780,
+8.20429,
+7.87967,
+7.88059,
+7.81743,
+9.95400,
+9.90782,
+9.95400,
+8.56088,
+8.59092,
+8.59101,
+9.85215,
+9.87576,
+9.85215,
+10.2345,
+10.2425,
+10.1848,
+13.6025,
+13.5081,
+13.6025,
+16.1862,
+16.1990,
+16.1877,
+17.7399,
+17.7061,
+17.7399,
+23.7022,
+23.7020,
+23.7022,
+21.3656,
+21.3455,
+21.3656,
+29.1841,
+29.1947,
+29.1980,
+24.5091,
+24.4642,
+24.5091,
+14.0943,
+14.1140,
+14.1185,
+9.18417,
+9.15858,
+9.18417,
+7.68374,
+7.67869,
+7.68964,
+7.35547,
+7.43981,
+7.35547,
+5.89112,
+5.87995,
+5.88529,
+7.32549,
+7.24899,
+7.32549,
+7.22540,
+7.23215,
+7.22576,
+7.15759,
+7.16171,
+7.15759,
+7.09540,
+7.10022,
+7.10508,
+8.50819,
+8.47199,
+8.50819,
+8.84116,
+8.84105,
+8.84034,
+10.6440,
+10.6692,
+10.6440,
+12.1458,
+12.1473,
+12.1439,
+16.2702,
+16.2687,
+16.2702,
+18.8542,
+18.8511,
+18.8539,
+18.9797,
+18.9937,
+18.9797,
+21.8471,
+21.8482,
+21.8373,
+23.0589,
+23.0704,
+23.0589,
+19.1097,
+19.1110,
+19.1113,
+13.1505,
+13.1525,
+13.1505,
+10.1375,
+10.1351,
+10.1377,
+9.60760,
+9.59729,
+9.60760,
+8.32405,
+8.32485,
+8.31564,
+9.27396,
+9.25418,
+9.27396,
+8.22790,
+8.23029,
+8.21105,
+8.75466,
+8.70533,
+8.75466,
+10.4541,
+10.4541,
+10.4541,
+11.4880,
+11.5495,
+11.4880,
+9.78174,
+9.79504,
+9.80376,
+10.0066,
+9.94133,
+10.0066,
+10.6530,
+10.6538,
+10.6532,
+10.8712,
+10.8445,
+10.8712,
+11.7963,
+11.7969,
+11.7779,
+12.3286,
+12.2073,
+12.3286,
+13.7866,
+13.7861,
+13.7936,
+14.9647,
+14.8992,
+14.9647,
+16.0176,
+16.0508,
+16.0477,
+18.7469,
+18.6856,
+18.7469,
+20.1189,
+20.1153,
+20.1227,
+21.0994,
+21.0718,
+21.0994,
+22.0567,
+21.9983,
+21.9997,
+24.0809,
+24.0019,
+24.0809,
+23.3764,
+23.3786,
+23.3735,
+24.6551,
+24.5868,
+24.6551,
+30.8072,
+30.8069,
+30.8008,
+20.4105,
+20.3496,
+20.4105,
+17.9322,
+17.9269,
+17.9455,
+15.8505,
+15.8384,
+15.8505,
+12.7271,
+12.7132,
+12.7180,
+14.0338,
+13.9728,
+14.0338,
+13.6142,
+13.6459,
+13.6442,
+13.2288,
+13.2128,
+13.2288,
+12.0891,
+12.1146,
+12.1472,
+12.7612,
+12.6924,
+12.7612,
+12.9989,
+13.0366]
+
+;
+        y= [7.69108,
+6.90921,
+7.69108,
+8.95488,
+8.95471,
+8.96401,
+7.35296,
+7.00340,
+7.35296,
+6.49436,
+6.49895,
+6.49917,
+6.81403,
+6.29956,
+6.81403,
+9.66703,
+9.66687,
+9.67018,
+11.7871,
+11.4700,
+11.7871,
+14.2759,
+14.2728,
+14.2745,
+16.4666,
+15.9198,
+16.4666,
+16.4357,
+16.4239,
+16.4242,
+15.7530,
+15.3586,
+15.7530,
+16.5482,
+16.5478,
+16.5557,
+6.18838,
+5.73446,
+6.18838,
+12.0335,
+12.0461,
+11.8763,
+10.6774,
+10.2261,
+10.6774,
+9.77433,
+9.77414,
+9.76801,
+9.98441,
+9.58484,
+9.98441,
+9.08325,
+9.07386,
+9.08715,
+9.57287,
+9.01038,
+9.57287,
+10.9676,
+10.9574,
+10.9581,
+11.1024,
+10.6950,
+11.1024,
+11.8238,
+11.8236,
+11.8254,
+12.8460,
+12.4265,
+12.8460,
+12.1317,
+12.1504,
+12.1408,
+12.6335,
+12.1687,
+12.6335,
+11.7891,
+11.7893,
+11.7860,
+12.1377,
+11.6450,
+12.1377,
+11.9198,
+11.9229,
+11.8150,
+11.0194,
+10.4610,
+11.0194,
+10.0091,
+10.0370,
+10.0372,
+9.62574,
+9.12749,
+9.62574,
+9.42325,
+9.42393,
+9.24537,
+5.84471,
+5.51216,
+5.84471,
+8.34116,
+8.39945,
+8.31885,
+4.42727,
+4.09413,
+4.42727,
+4.45252,
+4.45251,
+4.45252,
+3.47773,
+3.11615,
+3.47773,
+12.6048,
+12.6096,
+12.6058,
+12.8388,
+12.3719,
+12.8388,
+14.8748,
+14.8812,
+14.8661,
+12.5780,
+11.9976,
+12.5780,
+11.9875,
+12.0011,
+12.0028,
+14.5004,
+13.9806,
+14.5004,
+12.2255,
+12.2233,
+12.2115,
+11.4877,
+10.8459,
+11.4877,
+10.5868,
+10.5961,
+10.5860,
+10.2393,
+9.66557,
+10.2393,
+10.6561,
+10.6721,
+10.6764,
+7.90557,
+7.40793,
+7.90557,
+6.46485,
+6.46471,
+6.46785,
+7.69979,
+7.22959,
+7.69979,
+7.00917,
+7.00523,
+6.99436,
+8.15660,
+7.65784,
+8.15660,
+7.88911,
+7.88833,
+7.88202,
+8.22797,
+7.68005,
+8.22797,
+9.16536,
+9.16417,
+9.15157,
+8.04978,
+7.77184,
+8.04978,
+9.73925,
+9.73863,
+9.73879,
+10.6099,
+10.1923,
+10.6099,
+11.5071,
+11.5160,
+11.5185,
+10.5603,
+10.1664,
+10.5603,
+11.1862,
+11.1847,
+11.0784,
+10.8180,
+10.5064,
+10.8180,
+11.6290,
+11.6275,
+11.6165,
+12.0989,
+11.4162,
+12.0989,
+8.85883,
+8.85870,
+8.85883,
+10.9521,
+10.4261,
+10.9521,
+7.77437,
+7.79698,
+7.69813,
+4.19544,
+3.87208,
+4.19544,
+11.9997,
+12.0020,
+11.9994,
+10.6997,
+10.2031,
+10.6997,
+9.68712,
+9.68870,
+9.68455,
+8.83947,
+8.52057,
+8.83947,
+9.28071,
+9.28468,
+9.28600,
+8.99791,
+8.71207,
+8.99791,
+9.83423,
+9.95695,
+9.95595,
+7.14530,
+6.89762,
+7.14530,
+9.33327,
+9.34869,
+9.35142,
+5.55532,
+5.19077,
+5.55532,
+11.0345,
+11.0423,
+11.0420,
+10.1976,
+9.85875,
+10.1976,
+9.64871,
+9.64775,
+9.64463,
+11.3414,
+10.8869,
+11.3414,
+11.4247,
+11.4227,
+11.4283,
+11.5217,
+11.1256,
+11.5217,
+10.8064,
+10.8123,
+10.8131,
+12.7076,
+12.2088,
+12.7076,
+5.28850,
+5.28829,
+5.28400,
+5.43115,
+5.20932,
+5.43115,
+12.1594,
+12.1637,
+12.1606,
+12.0009,
+11.6183,
+12.0009,
+12.6417,
+12.6534,
+12.6446,
+4.50309,
+4.38297,
+4.50309,
+12.3627,
+12.3531];
+    
+
+    // adaptive parameter estimation (Least Mean Squares (LMS) method)
+    est_pXY = new Array(N);   // estimated production parameter set
+    est_pY = new Array(N);    // estimated degradation/dilution parameter set
+    est_y = new Array(N);     // y protein concentration (uM)
+    error = new Array(N);     // estimation error (y - est_y)
+    est_pXY[1] = 0;           // initial guess for pXY
+    est_pY[1] = 0;            // initial guess for pY
+    u = 0.0001;               // step size
+
+    for (n = 1; n < N-1; n++) // N-2 loops (1 loop = 1 min)
+    {
+        est_pXY[n+1] = est_pXY[n] + u*x[n-1]*(y[n]-(x[n-1]*est_pXY[n] + y[n-1]*est_pY[n]));
+        est_pY[n+1] = est_pY[n] + u*y[n-1]*(y[n]-(x[n-1]*est_pXY[n] + y[n-1]*est_pY[n]));
+        est_y[n+1] = x[n]*est_pXY[n+1] + y[n]*est_pY[n+1];
+        error[n+1] = y[n+1] - est_y[n+1];
+    }
+        
+        </div>
+
+        <!-- Code editor with default text -->
+        <script>
+            var editor = ace.edit("editor");
+            editor.setTheme("ace/theme/eclipse");
+            editor.getSession().setMode("ace/mode/javascript");
+            editor.setFontSize(16);
+            var random = new randomGaussain();
+
+
+            // Execute when [Run] is clicked
+            $( "#run" ).click(function() {
+                var chart = document.getElementById('chart');
+                var code = editor.getValue();
+                eval(code);
+                xData = {name: "x protein", x: n, y: x};
+                yData = {name: "y protein", x: n, y: y};
+                estY = {name: "estimated y protein", x: n, y: est_y};
+                estError = {name: "estimation error", x: n, y: error};
+                data = [];
+                if (document.getElementById('xProtein').checked) {
+                    data.push (xData);
+                }
+                if (document.getElementById('yProtein').checked) {
+                    data.push (yData);
+                }
+                data.push (estY);
+                data.push (estError);
+                layout = {
+                    xaxis: {title: 'time [min]'},
+                    yaxis: {title: 'protein concentration [uM]'},
+                    margin: {t: 40},
+                };
+
+                if (document.getElementById('hold').checked) {
+                    Plotly.plot(chart, data, layout);
+                } else {
+                    Plotly.newPlot(chart, data, layout);
+                }
+            });
+        </script>
+    </body>
+</html>

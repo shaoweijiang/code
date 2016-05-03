@@ -1,0 +1,52 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+<meta http-equiv="imagetoolbar" content="no" />
+<title>Shaowei: Fibonacci Number </title>
+<style>
+    table.tb{
+        width:900px;height:200px;border:1px solid;
+        border-collapse:collapse;cellpadding:0;cellspacing:0
+    }
+    table td{
+        border-right: 1px solid; border-bottom: 1px solid; 
+        font: bold 14pt "??";color:green;text-align:right; 
+    }
+</style>
+</head>
+<body>
+<div id = "text" class="container">
+<label for="numX">Enter the length of Fibonacci series (1 - 50):</label>
+                <input type="number" id="numX" value="50"><br>
+</div>
+    <input type="button" id="btn" value="Run" onclick="show()"/>
+    <table id="tb" class="tb">
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    </table>
+    <script>
+	
+        function show(){
+            var numX = document.getElementById("numX").value;
+            var arr = [];
+            arr[0] = 0;
+            arr[1] = 1;
+            for(var i=2;i<numX;i++){
+                arr[i] = arr[i-1]+arr[i-2];
+            }
+            
+            var $table = document.getElementById("tb");
+            for(var i=0; i<$table.rows.length; i++){
+                
+                var index = i*10;
+                for(var j=0; j<$table.rows[i].cells.length; j++){
+                    $table.rows[i].cells[j].innerHTML = arr[index+j];
+                }
+            }
+        }
+    </script>
+</body>
+</html>
